@@ -2,7 +2,7 @@ import re
 import itertools
 
 
-class Lingvuo:
+class Text:
 
 	@staticmethod
 	def version() -> str:
@@ -10,8 +10,9 @@ class Lingvuo:
 
 	def __init__(self, text: str):
 		self.path = text
-		self.text = text  # Contains custom property
+		self.text = text  # Contains custom property, initial text
 		self._num_of_letters = len(self.text)
+		self._updated_text = None
 
 	def __str__(self):
 		return self.text
@@ -139,39 +140,79 @@ class Lingvuo:
 		else:
 			raise ValueError()
 
-	def get_text_mirror(self, text: str, display:bool =True) ->str:
-		# ...
-		pass
+	def update_text_file(self, value:str):
+		with open(self.path, 'w') as f:
+			f.write(value)
 
 
-class Re(Lingvuo):
+class Re(Text):
 
-	def cotains_pattern(self, regex_pattern):
-		with open(self.path, 'r') as f:
-			string = ''
+	def _return_result(self, re_objects, display=False):
+		full_display = []
+		for o in re_objects:
+			spans:tuple = o.span()
+			start:int = spans[0]
+			end:int = spans[1]
+			new_list = o.group(), spans
+			full_display.append(new_list)
 
-			for line in f:
-				for letter in line:
-					string += letter
-		regex_pattern = r'' + regex_pattern
+		if display:
+			for el, position in full_display:
+				print(f'Element: {el}, position: {position}')
+		else:
+			pass
+
+		return full_display
+
+	def _prepare_string_for_re(self, regex_pattern:str) -> str:
+		reg_def = r''
+		regex_pattern = reg_def + regex_pattern
+		return regex_pattern
+
+	def get_first_match(self, regex_pattern: str, display=False):
+		regex_pattern = self._prepare_string_for_re(regex_pattern)
+		match = re.search(regex_pattern, self.text)
+		res = self._return_result([match])
+		return res
+
+	def check_fullmatch(self, regex_pattern: str, display=False) -> bool:
+		regex_pattern = self._prepare_string_for_re(regex_pattern)
+		match = re.fullmatch(regex_pattern, self.text)
+		if match: return True
+		return False
+
+	def get_all_matches(self, regex_pattern:str, display=False) -> list:
+		regex_pattern = self._prepare_string_for_re(regex_pattern)
 		pattern = re.compile(regex_pattern)
-		is_contains = pattern.finditer(self.text)
+		matches = pattern.finditer(self.text)
+		res = self._return_result(matches, display=display)
+		return res
 
-		for i in is_contains:
-			print(i)
+	def get_list_of_matches(self, regex_pattern: str) ->list:
+		regex_pattern = self._prepare_string_for_re(regex_pattern)
+		matches = re.findall(regex_pattern, self.text)
+		return matches
 
-	def get_patterns(self, regex_pattern):
-		with open(self.path, 'r') as f:
-			string = ''
+	def get_words_with_x_letters(self, num_of_letters: int, display=False):
+		edge = r'\b'
+		experssion = edge + '\w' + '{' + f'{num_of_letters}' + '}' + edge
+		pattern = re.compile(experssion)
+		matches = pattern.finditer(self.text)
+		res = self._return_result(matches, display=display)
+		return res
 
-			for line in f:
-				for letter in line:
-					string += letter
-		regex_pattern = r'' + regex_pattern
-		pattern = re.compile(regex_pattern)
-		is_contains = pattern.finditer(self.text)
+	def split(self, regex_pattern: str, maxsplit=0):
+		regex_pattern = self._prepare_string_for_re(regex_pattern)
+		text = re.split(regex_pattern, self.text, maxsplit=maxsplit)
+		return text
 
-		return is_contains
+	def replace_all_matches(self, regex_pattern: str, repl, count=0) -> str:
+		regex_pattern = self._prepare_string_for_re(regex_pattern)
+		replaced:list = re.sub(regex_pattern, repl, self.text, count=count)
+		return replaced
+
 
 C = Re('example.txt')
-C.cotains_pattern('a')
+new_text = C.replace_all_matches(r'\d+', '[HERE WAS A DIGIT!]')
+C.update_text_file(new_text)
+
