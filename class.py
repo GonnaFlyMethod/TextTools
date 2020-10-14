@@ -6,7 +6,7 @@ class Text:
 
 	@staticmethod
 	def version() -> str:
-		return '0.1'
+		return '0.2'
 
 	def __init__(self, text: str):
 		self.path = text
@@ -58,8 +58,7 @@ class Text:
 		with open(value, 'r') as f:
 			text = ''
 			for line in f:
-				clean_line = line.rstrip('\n')
-				for letter in clean_line:
+				for letter in line:
 					text += letter
 
 		self._text = text
@@ -147,7 +146,20 @@ class Text:
 
 class Re(Text):
 
-	def _return_result(self, re_objects, display=False):
+	HTML_TAGS = r'<\/?\w+(\s+)?[^>]*>'
+	LINKS = r'[\s|\n]{0}(https?://)?(www\.)?' \
+		      r'[A-Za-z0-9._]+\.\w+[^\s{}\[\]\{\}]+'
+
+	@classmethod
+	def get_regex(cls) -> dict:
+		reg_ex:dict = {
+			'HTML TAGS':cls.HTML_TAGS,
+			'LINKS': cls.LINKS,
+		}
+
+		return reg_ex
+
+	def _return_result(self, re_objects, display=False) -> list:
 		full_display = []
 		for o in re_objects:
 			spans:tuple = o.span()
@@ -172,7 +184,8 @@ class Re(Text):
 	def get_first_match(self, regex_pattern: str, display=False):
 		regex_pattern = self._prepare_string_for_re(regex_pattern)
 		match = re.search(regex_pattern, self.text)
-		res = self._return_result([match])
+		res = self._return_result([match], display=display)
+
 		return res
 
 	def check_fullmatch(self, regex_pattern: str, display=False) -> bool:
@@ -188,22 +201,23 @@ class Re(Text):
 		res = self._return_result(matches, display=display)
 		return res
 
-	def get_list_of_matches(self, regex_pattern: str) ->list:
+	def get_list_of_matches(self, regex_pattern: str) -> list:
 		regex_pattern = self._prepare_string_for_re(regex_pattern)
 		matches = re.findall(regex_pattern, self.text)
 		return matches
 
-	def get_words_with_x_letters(self, num_of_letters: int, display=False):
+	def get_words_with_x_letters(self, num_of_letters: int,
+		                         display=False) -> list:
 		edge = r'\b'
 		experssion = edge + '\w' + '{' + f'{num_of_letters}' + '}' + edge
 		pattern = re.compile(experssion)
 		matches = pattern.finditer(self.text)
-		res = self._return_result(matches, display=display)
+		res:list = self._return_result(matches, display=display)
 		return res
 
-	def split(self, regex_pattern: str, maxsplit=0):
+	def split(self, regex_pattern: str, maxsplit=0) -> list:
 		regex_pattern = self._prepare_string_for_re(regex_pattern)
-		text = re.split(regex_pattern, self.text, maxsplit=maxsplit)
+		text:list = re.split(regex_pattern, self.text, maxsplit=maxsplit)
 		return text
 
 	def replace_all_matches(self, regex_pattern: str, repl, count=0) -> str:
@@ -211,8 +225,12 @@ class Re(Text):
 		replaced:list = re.sub(regex_pattern, repl, self.text, count=count)
 		return replaced
 
+	def find_html_tags(self, display=False) -> list:
+		matches = re.finditer(self.HTML_TAGS, self.text)
+		res = self._return_result(matches, display=display)
+		return res
 
-C = Re('example.txt')
-new_text = C.replace_all_matches(r'\d+', '[HERE WAS A DIGIT!]')
-C.update_text_file(new_text)
-
+	def find_links(self, display=False) -> list:
+		matches = re.finditer(self.LINKS, self.text)
+		res = self._return_result(matches, display=display)
+		return res
