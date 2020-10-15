@@ -1,6 +1,8 @@
 import re
 import itertools
-
+import requests
+import json
+import pprint
 
 class Text:
 
@@ -149,12 +151,14 @@ class Re(Text):
 	HTML_TAGS = r'<\/?\w+(\s+)?[^>]*>'
 	LINKS = r'[\s|\n]{0}(https?://)?(www\.)?' \
 		      r'[A-Za-z0-9._]+\.\w+[^\s{}\[\]\{\}]+'
+	PHONE_NUMBERS = r'\+?\d{1,3}\s?([-(])\d{2,3}([-)])\s?\d+-?\d+'
 
 	@classmethod
 	def get_regex(cls) -> dict:
 		reg_ex:dict = {
 			'HTML TAGS':cls.HTML_TAGS,
 			'LINKS': cls.LINKS,
+			'PHONE_NUMBERS': cls.PHONE_NUMBERS
 		}
 
 		return reg_ex
@@ -234,3 +238,46 @@ class Re(Text):
 		matches = re.finditer(self.LINKS, self.text)
 		res = self._return_result(matches, display=display)
 		return res
+
+	def find_phone_numbers(self, display=False) -> list:
+		matches = re.finditer(self.PHONE_NUMBERS, self.text)
+		res = self._return_result(matches, display=display)
+		return res
+
+class Word(Re):
+
+	def __init__(self, word):
+		self.word = word
+
+	@property
+	def word(self):
+		return self._word
+
+	@word.setter
+	def word(self, value):
+		assert isinstance(value, str) == True
+
+		self._word = value.lower()
+	
+	# REST API
+	def get_usage(self, display=False) -> list:
+		apiurl = 'https://lt-collocation-test.herokuapp.com/todos/'\
+		         '?query=%s&lang=en' % self.word
+
+		response = requests.get(apiurl)
+		json_data = json.loads(response.text)
+		examples:list = []
+		for i in json_data:
+			ex = i['examples']
+			for e in ex:
+				if isinstance(e, str):
+					clean_line = re.sub(self.HTML_TAGS, '', e)
+					examples.append(clean_line)
+		
+		if display:
+			for num, ex in enumerate(examples):
+				print(f'{num + 1}) {ex}')
+		return examples
+
+word = Word('word')
+word.get_usage(display=True)
