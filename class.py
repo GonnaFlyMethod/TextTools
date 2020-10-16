@@ -152,13 +152,15 @@ class Re(Text):
 	LINKS = r'[\s|\n]{0}(https?://)?(www\.)?' \
 		      r'[A-Za-z0-9._]+\.\w+[^\s{}\[\]\{\}]+'
 	PHONE_NUMBERS = r'\+?\d{1,3}\s?([-(])\d{2,3}([-)])\s?\d+-?\d+'
+	SPORT_SCORE = r'\d{1,3}:\d{1,3}'
 
 	@classmethod
 	def get_regex(cls) -> dict:
 		reg_ex:dict = {
 			'HTML TAGS':cls.HTML_TAGS,
 			'LINKS': cls.LINKS,
-			'PHONE_NUMBERS': cls.PHONE_NUMBERS
+			'PHONE_NUMBERS': cls.PHONE_NUMBERS,
+			'SPORT_SCORE': cls.SPORT_SCORE
 		}
 
 		return reg_ex
@@ -279,5 +281,26 @@ class Word(Re):
 				print(f'{num + 1}) {ex}')
 		return examples
 
-word = Word('word')
-word.get_usage(display=True)
+	def predict_nationality_if_name(self, display=False):
+		api = f'https://api.nationalize.io/?name={self.word}'
+		response = requests.get(api)
+		get_json:dict = json.loads(response.text)
+		name = self.word.capitalize()
+
+		if display:
+			asteriks = '*' * 5
+			head = asteriks + f' [{name}] ' + asteriks
+			print(head)
+
+			country = get_json['country']
+			for c in country:
+				print(f"Country id: {c['country_id']}")
+				probability_raw = round(c['probability'] * 100, 2)
+				probability = str(probability_raw) + ' %'
+				print(f'Probability {probability}')
+				print('_' * len(head))
+		return get_json
+
+
+word = Word('Sasha')
+word.predict_nationality_if_name(display=True)
