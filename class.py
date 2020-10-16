@@ -246,6 +246,12 @@ class Re(Text):
 		res = self._return_result(matches, display=display)
 		return res
 
+	def find_sport_score(self, display=False) -> list:
+		matches = re.finditer(self.SPORT_SCORE, self.text)
+		res = self._return_result(matches, display=display)
+		return res
+
+
 class Word(Re):
 
 	def __init__(self, word):
@@ -281,11 +287,32 @@ class Word(Re):
 				print(f'{num + 1}) {ex}')
 		return examples
 
-	def predict_nationality_if_name(self, display=False):
+	def predict_gender_if_name(self, display=False) -> dict:
+		api = f'https://api.genderize.io/?name={self.word}'
+		response = requests.get(api)
+		get_json:dict = json.loads(response.text)
+		name = self.word.capitalize()
+		get_json['name'] = name
+
+		if display:
+			asteriks = '*' * 5
+			head = asteriks + f' [{name}] ' + asteriks
+			print(head)
+
+			probability_raw = round(get_json['probability'] * 100, 2)
+			prob = str(probability_raw) + ' %'
+			msg = "Gender: %s\nProbability: %s" % (get_json['gender'], prob)
+			print(msg)
+			print('_' * len(head))
+
+		return get_json
+
+	def predict_nationality_if_name(self, display=False) -> dict:
 		api = f'https://api.nationalize.io/?name={self.word}'
 		response = requests.get(api)
 		get_json:dict = json.loads(response.text)
 		name = self.word.capitalize()
+		get_json['name'] = name
 
 		if display:
 			asteriks = '*' * 5
@@ -297,10 +324,10 @@ class Word(Re):
 				print(f"Country id: {c['country_id']}")
 				probability_raw = round(c['probability'] * 100, 2)
 				probability = str(probability_raw) + ' %'
-				print(f'Probability {probability}')
+				print(f'Probability: {probability}')
 				print('_' * len(head))
 		return get_json
 
 
-word = Word('Sasha')
-word.predict_nationality_if_name(display=True)
+word = Word('Monica')
+word.predict_nationality_if_name()
