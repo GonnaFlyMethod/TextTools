@@ -270,7 +270,33 @@ class Word(Re):
 		asteriks = '*' * 5
 		head = asteriks + f' [{word.capitalize()}] ' + asteriks
 		print(head)
-	
+
+	def _detect_final_api(self, **params) -> str:
+		starts_with = None
+		max_ = None
+
+		for param, value in params.items():
+			if param == 'starts_with':
+				starts_with = value
+			else:
+				max_ = value
+
+		api = None
+		word_clean = self.word.replace(' ', '+').lower()
+		if not starts_with and not max_:
+			api = f'https://api.datamuse.com/words?ml={word_clean}'
+		elif starts_with and not max_:
+			api = 'https://api.datamuse.com/' \
+				  'words?ml=%s&sp=%s*' % (word_clean, starts_with)
+		elif not starts_with and max_:
+			api = 'https://api.datamuse.com/' \
+			      'words?ml=%s&max=%d' % (word_clean, max_)
+		else:
+			api = 'https://api.datamuse.com/' \
+			      'words?ml=%s&sp=%s*&max=%d' % (word_clean, starts_with, max_)
+
+		return api
+
 	# REST API
 	def get_usage(self, display=False) -> list:
 		apiurl = 'https://lt-collocation-test.herokuapp.com/todos/'\
@@ -331,23 +357,11 @@ class Word(Re):
 
 	def get_similar_meanings(self, starts_with=None, max_=None,
 		                     display=False) -> list:
-		word_clean = self.word.replace(' ', '+')
 
-		api = None
-		if not starts_with and not max_:
-			api = f'https://api.datamuse.com/words?ml={word_clean}'
-		elif starts_with and not max_:
-			api = 'https://api.datamuse.com/' \
-				  'words?ml=%s&sp=%s*' % (word_clean, starts_with)
-		elif not starts_with and max_:
-			api = 'https://api.datamuse.com/' \
-			      'words?ml=%s&max=%d' % (word_clean, max_)
-		else:
-			api = 'https://api.datamuse.com/' \
-			      'words?ml=%s&sp=%s*&max=%d' % (word_clean, starts_with, max_)
+		api = self._detect_final_api(starts_with=starts_with, max_=max_)
 
 		response = requests.get(api)
-		data: dict = json.loads(response.text)
+		data: list = json.loads(response.text)
 
 		if display:
 			self._print_head(self.word)
@@ -358,5 +372,25 @@ class Word(Re):
 				print(msg_clean)
 		return data
 
-word = Word('Leg')
-word.get_similar_meanings(starts_with='s', max_=3, display=True)
+	def get_words_that_sound_like(self, starts_with=None, max_=None,
+		                          display=False) -> list:
+		"""Get words that sound like self.word"""
+		word_clean = self.word.replace(' ', '+').lower()
+
+		raw_api = self._detect_final_api(starts_with=starts_with, max_=max_)
+		api_clean = raw_api.replace(f'ml={word_clean}', f'sl={word_clean}')
+		response = requests.get(api_clean)
+		data: list = json.loads(response.text)
+
+		if display:
+			self._print_head(self.word)
+
+			for num, dict_ in enumerate(data):
+				msg_raw = '%d) %s,' % (num + 1, dict_['word'].capitalize())
+				num_of_sylables = f" num of sylables: {dict_['numSyllables']}"
+				msg_clean = msg_raw + num_of_sylables
+				print(msg_clean)
+		return data
+
+word = Word('jirraf')
+word.get_words_that_sound_like(starts_with='g', max_=3, display=True)
