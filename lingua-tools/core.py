@@ -8,7 +8,7 @@ class Text:
 
 	@staticmethod
 	def version() -> str:
-		return '0.3'
+		return '0.0.5'
 
 	def __init__(self, text: str):
 		self.path = text
