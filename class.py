@@ -329,9 +329,23 @@ class Word(Re):
 				print('_' * len(head))
 		return get_json
 
-	def get_similar_meanings(self, display=False) -> list:
+	def get_similar_meanings(self, starts_with=None, max_=None,
+		                     display=False) -> list:
 		word_clean = self.word.replace(' ', '+')
-		api = f'https://api.datamuse.com/words?ml={word_clean}'
+
+		api = None
+		if not starts_with and not max_:
+			api = f'https://api.datamuse.com/words?ml={word_clean}'
+		elif starts_with and not max_:
+			api = 'https://api.datamuse.com/' \
+				  'words?ml=%s&sp=%s*' % (word_clean, starts_with)
+		elif not starts_with and max_:
+			api = 'https://api.datamuse.com/' \
+			      'words?ml=%s&max=%d' % (word_clean, max_)
+		else:
+			api = 'https://api.datamuse.com/' \
+			      'words?ml=%s&sp=%s*&max=%d' % (word_clean, starts_with, max_)
+
 		response = requests.get(api)
 		data: dict = json.loads(response.text)
 
@@ -344,6 +358,5 @@ class Word(Re):
 				print(msg_clean)
 		return data
 
-
 word = Word('Leg')
-print(word.get_similar_meanings())
+word.get_similar_meanings(starts_with='s', max_=3, display=True)
