@@ -8,7 +8,7 @@ class Text:
 
 	@staticmethod
 	def version() -> str:
-		return '0.2'
+		return '0.3'
 
 	def __init__(self, text: str):
 		self.path = text
@@ -258,14 +258,18 @@ class Word(Re):
 		self.word = word
 
 	@property
-	def word(self):
+	def word(self) -> str:
 		return self._word
 
 	@word.setter
 	def word(self, value):
 		assert isinstance(value, str) == True
-
 		self._word = value.lower()
+
+	def _print_head(self, word):
+		asteriks = '*' * 5
+		head = asteriks + f' [{word.capitalize()}] ' + asteriks
+		print(head)
 	
 	# REST API
 	def get_usage(self, display=False) -> list:
@@ -274,6 +278,7 @@ class Word(Re):
 
 		response = requests.get(apiurl)
 		json_data = json.loads(response.text)
+
 		examples:list = []
 		for i in json_data:
 			ex = i['examples']
@@ -283,6 +288,7 @@ class Word(Re):
 					examples.append(clean_line)
 		
 		if display:
+			self._print_head(self.word)
 			for num, ex in enumerate(examples):
 				print(f'{num + 1}) {ex}')
 		return examples
@@ -295,10 +301,7 @@ class Word(Re):
 		get_json['name'] = name
 
 		if display:
-			asteriks = '*' * 5
-			head = asteriks + f' [{name}] ' + asteriks
-			print(head)
-
+			self._print_head(name)
 			probability_raw = round(get_json['probability'] * 100, 2)
 			prob = str(probability_raw) + ' %'
 			msg = "Gender: %s\nProbability: %s" % (get_json['gender'], prob)
@@ -315,9 +318,7 @@ class Word(Re):
 		get_json['name'] = name
 
 		if display:
-			asteriks = '*' * 5
-			head = asteriks + f' [{name}] ' + asteriks
-			print(head)
+			self._print_head(name)
 
 			country = get_json['country']
 			for c in country:
@@ -328,6 +329,21 @@ class Word(Re):
 				print('_' * len(head))
 		return get_json
 
+	def get_similar_meanings(self, display=False) -> list:
+		word_clean = self.word.replace(' ', '+')
+		api = f'https://api.datamuse.com/words?ml={word_clean}'
+		response = requests.get(api)
+		data: dict = json.loads(response.text)
 
-word = Word('Monica')
-word.predict_nationality_if_name()
+		if display:
+			self._print_head(self.word)
+			for num, dict_ in enumerate(data):
+				msg_raw = '%d) %s,' % (num, dict_['word'].capitalize())
+				tags = f" tags: {dict_['tags']}"
+				msg_clean = msg_raw + tags
+				print(msg_clean)
+		return data
+
+
+word = Word('Leg')
+print(word.get_similar_meanings())
