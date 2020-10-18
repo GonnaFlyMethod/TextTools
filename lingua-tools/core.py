@@ -297,13 +297,18 @@ class Word(Re):
 
 		return api
 
+	def _get_json(self, api: str):
+		response = requests.get(api)
+		json_data = json.loads(response.text)
+
+		return json_data
+
 	# REST API
 	def get_usage(self, display=False) -> list:
 		apiurl = 'https://lt-collocation-test.herokuapp.com/todos/'\
 		         '?query=%s&lang=en' % self.word
 
-		response = requests.get(apiurl)
-		json_data = json.loads(response.text)
+		json_data = self._get_json(apiurl)
 
 		examples:list = []
 		for i in json_data:
@@ -321,8 +326,7 @@ class Word(Re):
 
 	def predict_gender_if_name(self, display=False) -> dict:
 		api = f'https://api.genderize.io/?name={self.word}'
-		response = requests.get(api)
-		get_json:dict = json.loads(response.text)
+		get_json:dict = self._get_json(api)
 		name = self.word.capitalize()
 		get_json['name'] = name
 
@@ -338,8 +342,7 @@ class Word(Re):
 
 	def predict_nationality_if_name(self, display=False) -> dict:
 		api = f'https://api.nationalize.io/?name={self.word}'
-		response = requests.get(api)
-		get_json:dict = json.loads(response.text)
+		get_json:dict = self._get_json(api)
 		name = self.word.capitalize()
 		get_json['name'] = name
 
@@ -359,9 +362,7 @@ class Word(Re):
 		                     display=False) -> list:
 
 		api = self._detect_final_api(starts_with=starts_with, max_=max_)
-
-		response = requests.get(api)
-		data: list = json.loads(response.text)
+		data: list = self._get_json(api)
 
 		if display:
 			self._print_head(self.word)
@@ -379,8 +380,7 @@ class Word(Re):
 
 		raw_api = self._detect_final_api(starts_with=starts_with, max_=max_)
 		api_clean = raw_api.replace(f'ml={word_clean}', f'sl={word_clean}')
-		response = requests.get(api_clean)
-		data: list = json.loads(response.text)
+		data: list = self._get_json(api_clean)
 
 		if display:
 			self._print_head(self.word)
@@ -392,5 +392,18 @@ class Word(Re):
 				print(msg_clean)
 		return data
 
-word = Word('jirraf')
-word.get_words_that_sound_like(starts_with='g', max_=3, display=True)
+	def get_words_that_spelled_similarly(self, max_=None, display=False) -> list:
+		word_clean = self.word.replace(' ', '+').lower()
+		raw_api = self._detect_final_api(starts_with=None, max_=max_)
+		api_clean = raw_api.replace(f'ml={word_clean}', f'sp={word_clean}')
+		data: list = self._get_json(api_clean)
+
+		if display:
+			self._print_head(self.word)
+			for num, dict_ in enumerate(data):
+				msg = '%d) %s' % (num + 1, dict_['word'].capitalize())
+				print(msg)
+		return data
+
+word = Word('hipopatamus')
+word.get_words_that_spelled_similarly(max_=1, display=True)
