@@ -256,6 +256,7 @@ class Word(Re):
 
 	def __init__(self, word):
 		self.word = word
+		self._word_for_api = self._set_value_for_api_requests(self.word)
 
 	@property
 	def word(self) -> str:
@@ -266,6 +267,15 @@ class Word(Re):
 		assert isinstance(value, str) == True
 		self._word = value.lower()
 
+	def _set_value_for_api_requests(self, value) ->str:
+		splitted_value = value.split()
+		clean_res = None
+		if len(splitted_value) > 1:
+			replace_spaces = value.replace(' ', '+')
+		else:
+			clean_res = value
+		return clean_res
+
 	def _print_head(self, word):
 		asteriks = '*' * 5
 		head = asteriks + f' [{word.capitalize()}] ' + asteriks
@@ -274,27 +284,31 @@ class Word(Re):
 	def _detect_final_api(self, **params) -> str:
 		starts_with = None
 		max_ = None
-
+		main_param = None
 		for param, value in params.items():
 			if param == 'starts_with':
-				starts_with = value
+				starts_with:str = value
+			elif param == 'main_param':
+				main_param:str = value
 			else:
-				max_ = value
+				max_:int = value
 
 		api = None
-		word_clean = self.word.replace(' ', '+').lower()
 		if not starts_with and not max_:
-			api = f'https://api.datamuse.com/words?ml={word_clean}'
+			mp, wc = main_param, self._word_for_api
+			api = f'https://api.datamuse.com/words?{mp}={wc}'
 		elif starts_with and not max_:
+			params_set:tuple = (main_param, self._word_for_api, starts_with)
 			api = 'https://api.datamuse.com/' \
-				  'words?ml=%s&sp=%s*' % (word_clean, starts_with)
+				  'words?%s=%s&sp=%s*' % params_set
 		elif not starts_with and max_:
 			api = 'https://api.datamuse.com/' \
-			      'words?ml=%s&max=%d' % (word_clean, max_)
+			      'words?%s=%s&max=%d' % (main_param, self._word_for_api, max_)
 		else:
+			params_set:tuple = (main_param, self._word_for_api,
+				                starts_with, max_)
 			api = 'https://api.datamuse.com/' \
-			      'words?ml=%s&sp=%s*&max=%d' % (word_clean, starts_with, max_)
-
+			      'words?%s=%s&sp=%s*&max=%d' % params_set
 		return api
 
 	def _get_json(self, api: str):
@@ -306,7 +320,7 @@ class Word(Re):
 	# REST API
 	def get_usage(self, display=False) -> list:
 		apiurl = 'https://lt-collocation-test.herokuapp.com/todos/'\
-		         '?query=%s&lang=en' % self.word
+		         '?query=%s&lang=en' % self._word_for_api
 
 		json_data = self._get_json(apiurl)
 
@@ -361,7 +375,12 @@ class Word(Re):
 	def get_similar_meanings(self, starts_with=None, max_=None,
 		                     display=False) -> list:
 
-		api = self._detect_final_api(starts_with=starts_with, max_=max_)
+		kwargs_for_method:dict = {
+			'starts_with': starts_with,
+			'max_': max_,
+			'main_param': 'ml'
+		}
+		api = self._detect_final_api(**kwargs_for_method)
 		data: list = self._get_json(api)
 
 		if display:
@@ -376,11 +395,15 @@ class Word(Re):
 	def get_words_that_sound_like(self, starts_with=None, max_=None,
 		                          display=False) -> list:
 		"""Get words that sound like self.word"""
-		word_clean = self.word.replace(' ', '+').lower()
 
-		raw_api = self._detect_final_api(starts_with=starts_with, max_=max_)
-		api_clean = raw_api.replace(f'ml={word_clean}', f'sl={word_clean}')
-		data: list = self._get_json(api_clean)
+		kwargs_for_method:dict = {
+			'starts_with': starts_with,
+			'max_': max_,
+			'main_param': 'sl'
+		}
+
+		api = self._detect_final_api(**kwargs_for_method)
+		data: list = self._get_json(api)
 
 		if display:
 			self._print_head(self.word)
@@ -392,11 +415,16 @@ class Word(Re):
 				print(msg_clean)
 		return data
 
-	def get_words_that_spelled_similarly(self, max_=None, display=False) -> list:
-		word_clean = self.word.replace(' ', '+').lower()
-		raw_api = self._detect_final_api(starts_with=None, max_=max_)
-		api_clean = raw_api.replace(f'ml={word_clean}', f'sp={word_clean}')
-		data: list = self._get_json(api_clean)
+	def get_words_that_spelled_similarly(self, max_=None, 
+		                                 display=False) -> list:
+
+		kwargs_for_method:dict = {
+			'max_': max_,
+			'main_param': 'sp'
+		}
+
+		api = self._detect_final_api(**kwargs_for_method)
+		data: list = self._get_json(api)
 
 		if display:
 			self._print_head(self.word)
@@ -405,5 +433,23 @@ class Word(Re):
 				print(msg)
 		return data
 
-word = Word('hipopatamus')
-word.get_words_that_spelled_similarly(max_=1, display=True)
+	def get_words_that_rhyme_with(self, starts_with=None, max_=None,
+	                              display=False) -> list:
+		kwargs_for_method:dict = {
+			'starts_with': starts_with,
+			'max_': max_,
+			'main_param': 'rel_rhy'
+		}
+
+		api = self._detect_final_api(**kwargs_for_method)
+		data: list = self._get_json(api)
+
+		if display:
+			self._print_head(self.word)
+			for num, dict_ in enumerate(data):
+				msg = '%d) %s' % (num + 1, dict_['word'].capitalize())
+				print(msg)
+		return data
+
+word = Word('smoke')
+word.get_words_that_spelled_similarly(max_=3, display=True)
