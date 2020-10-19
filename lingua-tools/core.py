@@ -317,6 +317,14 @@ class Word(Re):
 
 		return json_data
 
+	def _prevent_repetition(self, data: list) -> list:
+		for num_of_iter, dict_ in enumerate(data):
+			if dict_['word'] == self.word:
+				data.pop(num_of_iter)
+			else:
+				continue
+		return data
+
 	# REST API
 	def get_usage(self, display=False) -> list:
 		apiurl = 'https://lt-collocation-test.herokuapp.com/todos/'\
@@ -426,12 +434,14 @@ class Word(Re):
 		api = self._detect_final_api(**kwargs_for_method)
 		data: list = self._get_json(api)
 
+		clean_data: list = self._prevent_repetition(data)
+
 		if display:
 			self._print_head(self.word)
-			for num, dict_ in enumerate(data):
+			for num, dict_ in enumerate(clean_data):
 				msg = '%d) %s' % (num + 1, dict_['word'].capitalize())
 				print(msg)
-		return data
+		return clean_data
 
 	def get_words_that_rhyme_with(self, starts_with=None, max_=None,
 	                              display=False) -> list:
@@ -444,12 +454,14 @@ class Word(Re):
 		api = self._detect_final_api(**kwargs_for_method)
 		data: list = self._get_json(api)
 
+		clean_data: list = self._prevent_repetition(data)
+
 		if display:
 			self._print_head(self.word)
-			for num, dict_ in enumerate(data):
+			for num, dict_ in enumerate(clean_data):
 				msg = '%d) %s' % (num + 1, dict_['word'].capitalize())
 				print(msg)
-		return data
+		return clean_data
 
 word = Word('smoke')
-word.get_words_that_spelled_similarly(max_=3, display=True)
+word.get_words_that_rhyme_with(max_=3)
