@@ -3,6 +3,11 @@ import itertools
 import requests
 import json
 import pprint
+import asyncio
+from aiohttp import ClientSession
+from _async import async_HTTP_request
+
+import time
 
 class Text:
 
@@ -362,8 +367,9 @@ class Word(Re):
 
 		return get_json
 
-	def predict_nationality_if_name(self, display=False) -> dict:
+	async def predict_nationality_if_name(self, display=False) -> dict:
 		api = f'https://api.nationalize.io/?name={self.word}'
+		return api
 		get_json:dict = self._get_json(api)
 		name = self.word.capitalize()
 		get_json['name'] = name
@@ -443,7 +449,7 @@ class Word(Re):
 				print(msg)
 		return clean_data
 
-	def get_words_that_rhyme_with(self, starts_with=None, max_=None,
+	async def get_words_that_rhyme_with(self, starts_with=None, max_=None,
 	                              display=False) -> list:
 		kwargs_for_method:dict = {
 			'starts_with': starts_with,
@@ -451,8 +457,11 @@ class Word(Re):
 			'main_param': 'rel_rhy'
 		}
 
+		new_api: list = []
 		api = self._detect_final_api(**kwargs_for_method)
-		data: list = self._get_json(api)
+		return api
+		# data: list = 
+		return data
 
 		clean_data: list = self._prevent_repetition(data)
 
@@ -463,5 +472,19 @@ class Word(Re):
 				print(msg)
 		return clean_data
 
-word = Word('smoke')
-word.get_words_that_rhyme_with(max_=3)
+	async def task_async(self, *funcs):
+		urls = []
+		for func in funcs:
+			res = await func(self)
+			urls.append(res)
+		res = await async_HTTP_request(urls)
+		return res
+		
+
+word = Word('hello')
+loop = asyncio.get_event_loop()
+urls = (Word.predict_nationality_if_name, Word.predict_nationality_if_name,
+Word.predict_nationality_if_name)
+task = word.task_async(*urls)
+res = loop.run_until_complete(task)
+pprint.pprint(res)
