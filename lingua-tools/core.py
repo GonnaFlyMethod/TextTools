@@ -351,8 +351,9 @@ class Word(Re):
 				print(f'{num + 1}) {ex}')
 		return examples
 
-	def predict_gender_if_name(self, display=False) -> dict:
+	async def predict_gender_if_name(self, display=False) -> dict:
 		api = f'https://api.genderize.io/?name={self.word}'
+		return api
 		get_json:dict = self._get_json(api)
 		name = self.word.capitalize()
 		get_json['name'] = name
@@ -484,7 +485,7 @@ class Word(Re):
 word = Word('hello')
 loop = asyncio.get_event_loop()
 urls = (Word.predict_nationality_if_name, Word.predict_nationality_if_name,
-Word.predict_nationality_if_name)
+Word.predict_gender_if_name, Word.predict_gender_if_name)
 task = word.task_async(*urls)
 res = loop.run_until_complete(task)
 pprint.pprint(res)
