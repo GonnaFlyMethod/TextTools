@@ -4,6 +4,7 @@ import requests
 import json
 import pprint
 import asyncio
+from typing import Union
 from aiohttp import ClientSession
 from _async import async_HTTP_request
 
@@ -325,51 +326,45 @@ class Word(Re):
 		return data
 
 	# REST API
-	async def get_usage(self, display=False) -> list:
-		apiurl = 'https://lt-collocation-test.herokuapp.com/todos/'\
-		         '?query=%s&lang=en' % self._word_for_api
+	async def get_usage(self, display=False, data=False) -> Union[str, None]:
 
-		json_data = self._get_json(apiurl)
+		if not display and not data:
+			api = 'https://lt-collocation-test.herokuapp.com/todos/'\
+				  '?query=%s&lang=en' % self._word_for_api
+			return api
+		else:
+			examples:list = []
+			for i in json_data:
+				ex = i['examples']
+				for e in ex:
+					if isinstance(e, str):
+						clean_line = re.sub(self.HTML_TAGS, '', e)
+						examples.append(clean_line)
+				self._print_head(self.word)
+				for num, ex in enumerate(examples):
+					print(f'{num + 1}) {ex}')
 
-		examples:list = []
-		for i in json_data:
-			ex = i['examples']
-			for e in ex:
-				if isinstance(e, str):
-					clean_line = re.sub(self.HTML_TAGS, '', e)
-					examples.append(clean_line)
-		
-		if display:
+	async def predict_gender_if_name(self, display=False,
+		                             data=False) -> Union[str, None]:
+
+		if not display and not data:
+			api = f'https://api.genderize.io/?name={self.word}'
+			return api
+
+		else:
 			self._print_head(self.word)
-			for num, ex in enumerate(examples):
-				print(f'{num + 1}) {ex}')
-		return examples
-
-	async def predict_gender_if_name(self, display=False) -> dict:
-		api = f'https://api.genderize.io/?name={self.word}'
-		return api
-		get_json:dict = self._get_json(api)
-		name = self.word.capitalize()
-		get_json['name'] = name
-
-		if display:
-			self._print_head(name)
-			probability_raw = round(get_json['probability'] * 100, 2)
+			probability_raw = round(data['probability'] * 100, 2)
 			prob = str(probability_raw) + ' %'
-			msg = "Gender: %s\nProbability: %s" % (get_json['gender'], prob)
+			msg = "Gender: %s\nProbability: %s" % (data['gender'], prob)
 			print(msg)
-			print('_' * len(head))
+			print('_' * 50)
 
-		return get_json
-
-	async def predict_nationality_if_name(self, display=False) -> dict:
-		api = f'https://api.nationalize.io/?name={self.word}'
-		return api
-		get_json:dict = self._get_json(api)
-		name = self.word.capitalize()
-		get_json['name'] = name
-
-		if display:
+	async def predict_nationality_if_name(self, display=False,
+		                                  data=False) -> Union[str, None]:
+		if not display and not data:
+			api = f'https://api.nationalize.io/?name={self.word}'
+			return api
+		else:
 			self._print_head(name)
 
 			country = get_json['country']
@@ -379,42 +374,41 @@ class Word(Re):
 				probability = str(probability_raw) + ' %'
 				print(f'Probability: {probability}')
 				print('_' * len(head))
-		return get_json
 
 	async def get_similar_meanings(self, starts_with=None, max_=None,
-		                     display=False) -> list:
+		                           display=False, data=False) -> list:
 
-		kwargs_for_method:dict = {
-			'starts_with': starts_with,
-			'max_': max_,
-			'main_param': 'ml'
-		}
-		api = self._detect_final_api(**kwargs_for_method)
-		data: list = self._get_json(api)
-
-		if display:
+		if not display and not data:
+			kwargs_for_method:dict = {
+				'starts_with': starts_with,
+				'max_': max_,
+				'main_param': 'ml'
+			}
+			api = self._detect_final_api(**kwargs_for_method)
+			return api
+		else:
 			self._print_head(self.word)
 			for num, dict_ in enumerate(data):
 				msg_raw = '%d) %s,' % (num, dict_['word'].capitalize())
 				tags = f" tags: {dict_['tags']}"
 				msg_clean = msg_raw + tags
 				print(msg_clean)
-		return data
 
 	async def get_words_that_sound_like(self, starts_with=None, max_=None,
-		                          display=False) -> list:
+		                                display=False,
+		                                data=False) -> Union[str, None]:
 		"""Get words that sound like self.word"""
 
-		kwargs_for_method:dict = {
-			'starts_with': starts_with,
-			'max_': max_,
-			'main_param': 'sl'
-		}
+		if not display and not data:
+			kwargs_for_method:dict = {
+				'starts_with': starts_with,
+				'max_': max_,
+				'main_param': 'sl'
+			}
 
-		api = self._detect_final_api(**kwargs_for_method)
-		data: list = self._get_json(api)
-
-		if display:
+			api = self._detect_final_api(**kwargs_for_method)
+			return api
+		else:
 			self._print_head(self.word)
 
 			for num, dict_ in enumerate(data):
@@ -422,56 +416,48 @@ class Word(Re):
 				num_of_sylables = f" num of sylables: {dict_['numSyllables']}"
 				msg_clean = msg_raw + num_of_sylables
 				print(msg_clean)
-		return data
 
-	async def get_words_that_spelled_similarly(self, max_=None, 
-		                                 display=False) -> list:
+	async def get_words_that_spelled_similarly(self, max_=None, display=False,
+		                                       data=False) -> Union[str, None]:
 
-		kwargs_for_method:dict = {
-			'max_': max_,
-			'main_param': 'sp'
-		}
-		api = self._detect_final_api(**kwargs_for_method)
-		return api
-		data: list = self._get_json(api)
-
-		clean_data: list = self._prevent_repetition(data)
-
-		if display:
+		if not display and not data:
+			kwargs_for_method:dict = {
+				'max_': max_,
+				'main_param': 'sp'
+			}
+			api = self._detect_final_api(**kwargs_for_method)
+			return api
+		else:
+			clean_data: list = self._prevent_repetition(data)
 			self._print_head(self.word)
 			for num, dict_ in enumerate(clean_data):
 				msg = '%d) %s' % (num + 1, dict_['word'].capitalize())
 				print(msg)
-		return clean_data
 
 	async def get_words_that_rhyme_with(self, starts_with=None, max_=None,
-	                              display=False) -> list:
-		kwargs_for_method:dict = {
-			'starts_with': starts_with,
-			'max_': max_,
-			'main_param': 'rel_rhy'
-		}
+	                                    display=False,
+	                                    data=False) -> Union[str, None]:
 
-		new_api: list = []
-		api = self._detect_final_api(**kwargs_for_method)
-		response = requests.get(api)
-		data = json.loads(response.text)
-		# return api
-		# data: list = 
-		# return data
+		if not display and not data:
+			kwargs_for_method:dict = {
+				'starts_with': starts_with,
+				'max_': max_,
+				'main_param': 'rel_rhy'
+			}
 
-		clean_data: list = self._prevent_repetition(data)
-
-		if display:
+			api = self._detect_final_api(**kwargs_for_method)
+			return api
+		else:
+			clean_data: list = self._prevent_repetition(data)
 			self._print_head(self.word)
 			for num, dict_ in enumerate(clean_data):
 				msg = '%d) %s' % (num + 1, dict_['word'].capitalize())
 				print(msg)
-		return clean_data
 
-	async def task_async(self, *funcs_and_kwargs) -> dict:
+	async def task_async(self, *funcs_and_kwargs, display=False) -> dict:
 		urls = []
-		functions_name_and_urls:dict = {}
+		functions_name_and_functions_objs:dict = {}
+		functions_name_and_urls: dict = {}
 		res = None
 		for func, kwargs in funcs_and_args:
 
@@ -480,21 +466,27 @@ class Word(Re):
 			else:
 				res = await func(self, **kwargs)
 			functions_name_and_urls[func.__name__] = res
+			functions_name_and_functions_objs[func.__name__] = func
 		res:list = await async_HTTP_request(functions_name_and_urls)
 
 		final_res: dict = {}
 		for dict_ in res:
 			final_res.update(dict_)
+
+		if display:
+			for func, res in final_res.items():
+				func_obj = functions_name_and_functions_objs[func]
+				await func_obj(self, display=True, data=res)
 		return final_res
 
 word = Word('hello')
 loop = asyncio.get_event_loop()
 
 funcs_and_args = [(Word.get_words_that_spelled_similarly, None),
-				  (Word.get_words_that_spelled_similarly, None),
-				  (Word.get_words_that_spelled_similarly, None),]
+				  (Word.get_words_that_rhyme_with, None),
+				  (Word.predict_gender_if_name, None)]
 
 start = time.time()
-task = word.task_async(*funcs_and_args)
+task = word.task_async(*funcs_and_args, display=True)
 res = loop.run_until_complete(task)
 
