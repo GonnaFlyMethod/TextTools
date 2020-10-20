@@ -316,12 +316,6 @@ class Word(Re):
 			      'words?%s=%s&sp=%s*&max=%d' % params_set
 		return api
 
-	def _get_json(self, api: str):
-		response = requests.get(api)
-		json_data = json.loads(response.text)
-
-		return json_data
-
 	def _prevent_repetition(self, data: list) -> list:
 		for num_of_iter, dict_ in enumerate(data):
 			if dict_['word'] == self.word:
@@ -331,7 +325,7 @@ class Word(Re):
 		return data
 
 	# REST API
-	def get_usage(self, display=False) -> list:
+	async def get_usage(self, display=False) -> list:
 		apiurl = 'https://lt-collocation-test.herokuapp.com/todos/'\
 		         '?query=%s&lang=en' % self._word_for_api
 
@@ -387,7 +381,7 @@ class Word(Re):
 				print('_' * len(head))
 		return get_json
 
-	def get_similar_meanings(self, starts_with=None, max_=None,
+	async def get_similar_meanings(self, starts_with=None, max_=None,
 		                     display=False) -> list:
 
 		kwargs_for_method:dict = {
@@ -407,7 +401,7 @@ class Word(Re):
 				print(msg_clean)
 		return data
 
-	def get_words_that_sound_like(self, starts_with=None, max_=None,
+	async def get_words_that_sound_like(self, starts_with=None, max_=None,
 		                          display=False) -> list:
 		"""Get words that sound like self.word"""
 
@@ -430,15 +424,15 @@ class Word(Re):
 				print(msg_clean)
 		return data
 
-	def get_words_that_spelled_similarly(self, max_=None, 
+	async def get_words_that_spelled_similarly(self, max_=None, 
 		                                 display=False) -> list:
 
 		kwargs_for_method:dict = {
 			'max_': max_,
 			'main_param': 'sp'
 		}
-
 		api = self._detect_final_api(**kwargs_for_method)
+		return api
 		data: list = self._get_json(api)
 
 		clean_data: list = self._prevent_repetition(data)
@@ -460,9 +454,11 @@ class Word(Re):
 
 		new_api: list = []
 		api = self._detect_final_api(**kwargs_for_method)
-		return api
+		response = requests.get(api)
+		data = json.loads(response.text)
+		# return api
 		# data: list = 
-		return data
+		# return data
 
 		clean_data: list = self._prevent_repetition(data)
 
@@ -473,19 +469,32 @@ class Word(Re):
 				print(msg)
 		return clean_data
 
-	async def task_async(self, *funcs):
+	async def task_async(self, *funcs_and_kwargs) -> dict:
 		urls = []
-		for func in funcs:
-			res = await func(self)
-			urls.append(res)
-		res = await async_HTTP_request(urls)
-		return res
-		
+		functions_name_and_urls:dict = {}
+		res = None
+		for func, kwargs in funcs_and_args:
+
+			if not kwargs:
+				res = await func(self)
+			else:
+				res = await func(self, **kwargs)
+			functions_name_and_urls[func.__name__] = res
+		res:list = await async_HTTP_request(functions_name_and_urls)
+
+		final_res: dict = {}
+		for dict_ in res:
+			final_res.update(dict_)
+		return final_res
 
 word = Word('hello')
 loop = asyncio.get_event_loop()
-urls = (Word.predict_nationality_if_name, Word.predict_nationality_if_name,
-Word.predict_gender_if_name, Word.predict_gender_if_name)
-task = word.task_async(*urls)
+
+funcs_and_args = [(Word.get_words_that_spelled_similarly, None),
+				  (Word.get_words_that_spelled_similarly, None),
+				  (Word.get_words_that_spelled_similarly, None),]
+
+start = time.time()
+task = word.task_async(*funcs_and_args)
 res = loop.run_until_complete(task)
-pprint.pprint(res)
+
