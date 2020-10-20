@@ -282,9 +282,10 @@ class Word(Re):
 			clean_res = value
 		return clean_res
 
-	def _print_head(self, word):
+	def _print_head(self, word, type_of_analysis):
 		asteriks = '*' * 5
-		head = asteriks + f' [{word.capitalize()}] ' + asteriks
+		t_of_analysis: str = f'| Type of analysis: {type_of_analysis.lower()}'
+		head = asteriks + f' [{word.capitalize()} {t_of_analysis}] ' + asteriks
 		print(head)
 
 	def _detect_final_api(self, **params) -> str:
@@ -334,15 +335,16 @@ class Word(Re):
 			return api
 		else:
 			examples:list = []
-			for i in json_data:
+			for i in data:
 				ex = i['examples']
 				for e in ex:
 					if isinstance(e, str):
 						clean_line = re.sub(self.HTML_TAGS, '', e)
 						examples.append(clean_line)
-				self._print_head(self.word)
-				for num, ex in enumerate(examples):
-					print(f'{num + 1}) {ex}')
+			self._print_head(self.word, 'Usage')
+			for num, ex in enumerate(examples):
+				print(f'{num + 1}) {ex}')
+			print('_' * 60)
 
 	async def predict_gender_if_name(self, display=False,
 		                             data=False) -> Union[str, None]:
@@ -352,12 +354,12 @@ class Word(Re):
 			return api
 
 		else:
-			self._print_head(self.word)
+			self._print_head(self.word, 'prediction of gender by name')
 			probability_raw = round(data['probability'] * 100, 2)
 			prob = str(probability_raw) + ' %'
 			msg = "Gender: %s\nProbability: %s" % (data['gender'], prob)
 			print(msg)
-			print('_' * 50)
+			print('_' * 60)
 
 	async def predict_nationality_if_name(self, display=False,
 		                                  data=False) -> Union[str, None]:
@@ -365,18 +367,19 @@ class Word(Re):
 			api = f'https://api.nationalize.io/?name={self.word}'
 			return api
 		else:
-			self._print_head(name)
+			self._print_head(self.word, 'prediction of nationality by name')
 
-			country = get_json['country']
+			country = data['country']
 			for c in country:
 				print(f"Country id: {c['country_id']}")
 				probability_raw = round(c['probability'] * 100, 2)
 				probability = str(probability_raw) + ' %'
 				print(f'Probability: {probability}')
-				print('_' * len(head))
+			print('_' * 60)
 
 	async def get_similar_meanings(self, starts_with=None, max_=None,
-		                           display=False, data=False) -> list:
+		                           display=False,
+		                           data=False) -> Union[str, None]:
 
 		if not display and not data:
 			kwargs_for_method:dict = {
@@ -387,12 +390,20 @@ class Word(Re):
 			api = self._detect_final_api(**kwargs_for_method)
 			return api
 		else:
-			self._print_head(self.word)
+			type_ = f'words that have similar meanings with {self.word}'
+			self._print_head(self.word, type_)
 			for num, dict_ in enumerate(data):
 				msg_raw = '%d) %s,' % (num, dict_['word'].capitalize())
-				tags = f" tags: {dict_['tags']}"
+
+				tags = ''
+				try:
+					tags = f" tags: {dict_['tags']}"
+				except KeyError:
+					pass
+
 				msg_clean = msg_raw + tags
 				print(msg_clean)
+			print('_' * 60)
 
 	async def get_words_that_sound_like(self, starts_with=None, max_=None,
 		                                display=False,
@@ -409,13 +420,15 @@ class Word(Re):
 			api = self._detect_final_api(**kwargs_for_method)
 			return api
 		else:
-			self._print_head(self.word)
+			type_ = f'words that sound like {self.word}'
+			self._print_head(self.word, type_)
 
 			for num, dict_ in enumerate(data):
 				msg_raw = '%d) %s,' % (num + 1, dict_['word'].capitalize())
 				num_of_sylables = f" num of sylables: {dict_['numSyllables']}"
 				msg_clean = msg_raw + num_of_sylables
 				print(msg_clean)
+			print('_' * 60)
 
 	async def get_words_that_spelled_similarly(self, max_=None, display=False,
 		                                       data=False) -> Union[str, None]:
@@ -429,10 +442,12 @@ class Word(Re):
 			return api
 		else:
 			clean_data: list = self._prevent_repetition(data)
-			self._print_head(self.word)
+			type_ = f'words that spelled similarly with {self.word}'
+			self._print_head(self.word, type_)
 			for num, dict_ in enumerate(clean_data):
 				msg = '%d) %s' % (num + 1, dict_['word'].capitalize())
 				print(msg)
+			print('_' * 60)
 
 	async def get_words_that_rhyme_with(self, starts_with=None, max_=None,
 	                                    display=False,
@@ -449,10 +464,12 @@ class Word(Re):
 			return api
 		else:
 			clean_data: list = self._prevent_repetition(data)
-			self._print_head(self.word)
+			type_ = f'words that rhyme with {self.word}'
+			self._print_head(self.word, type_)
 			for num, dict_ in enumerate(clean_data):
 				msg = '%d) %s' % (num + 1, dict_['word'].capitalize())
 				print(msg)
+			print('_' * 60)
 
 	async def task_async(self, *funcs_and_kwargs, display=False) -> dict:
 		urls = []
@@ -479,14 +496,18 @@ class Word(Re):
 				await func_obj(self, display=True, data=res)
 		return final_res
 
-word = Word('hello')
+word = Word('Sun')
 loop = asyncio.get_event_loop()
 
-funcs_and_args = [(Word.get_words_that_spelled_similarly, None),
-				  (Word.get_words_that_rhyme_with, None),
-				  (Word.predict_gender_if_name, None)]
+funcs_and_args = [
+				  (Word.predict_gender_if_name, None),
+				  (Word.predict_nationality_if_name, None),
+				  (Word.get_similar_meanings, None),
+				  (Word.get_words_that_sound_like, None),
+				  (Word.get_words_that_spelled_similarly, None),
+				  ]
 
 start = time.time()
-task = word.task_async(*funcs_and_args, display=True)
+task = word.task_async(*funcs_and_args)
 res = loop.run_until_complete(task)
-
+print(res)
