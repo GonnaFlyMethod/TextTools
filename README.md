@@ -1,10 +1,8 @@
 
-#Lingua-tools
+#*Lingua-tools
 
 ---
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/GonnaFlyMethod/lingua-tools/blob/master/LICENSE)
-
-Snake 1976 is a console game that follows the logic of the classic snake.The game also contains some new game modes and features. Enjoy the game! :snake:
 
 ## Description
 
