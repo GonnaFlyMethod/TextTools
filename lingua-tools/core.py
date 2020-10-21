@@ -292,30 +292,52 @@ class Word(Re):
 		starts_with = None
 		max_ = None
 		main_param = None
+		additional_param = None
+		additional_param_value = None
 		for param, value in params.items():
 			if param == 'starts_with':
 				starts_with:str = value
 			elif param == 'main_param':
 				main_param:str = value
-			else:
+			elif param == 'max_':
 				max_:int = value
 
+			# Other information
+			else:
+				additional_param: str = value['additional_param']
+				additional_param_value: str = value['value']
+
 		api = None
-		if not starts_with and not max_:
+		if not starts_with and not max_ and not additional_param:
 			mp, wc = main_param, self._word_for_api
 			api = f'https://api.datamuse.com/words?{mp}={wc}'
-		elif starts_with and not max_:
+		elif starts_with and not max_ and not additional_param:
 			params_set:tuple = (main_param, self._word_for_api, starts_with)
 			api = 'https://api.datamuse.com/' \
 				  'words?%s=%s&sp=%s*' % params_set
-		elif not starts_with and max_:
+		elif not starts_with and max_ and not additional_param:
 			api = 'https://api.datamuse.com/' \
 			      'words?%s=%s&max=%d' % (main_param, self._word_for_api, max_)
-		else:
+		elif starts_with and max_ and not additional_param:
 			params_set:tuple = (main_param, self._word_for_api,
 				                starts_with, max_)
 			api = 'https://api.datamuse.com/' \
 			      'words?%s=%s&sp=%s*&max=%d' % params_set
+		elif not starts_with and not max_ and additional_param:
+			params_set:tuple = (main_param, self._word_for_api,
+				                additional_param, additional_param_value)
+			api = 'https://api.datamuse.com/' \
+			      'words?%s=%s&%s=%s' % params_set
+		elif start_with and not max_ and additional_param:
+			params_set:tuple = (main_param, self._word_for_api, starts_with,
+								additional_param, additional_param_value)
+			api = 'https://api.datamuse.com/' \
+			      'words?%s=%s&sp=%s*&%s=%s' % params_set
+		else:
+			params_set:tuple = (main_param, self._word_for_api, starts_with,
+								max_, additional_param, additional_param_value)
+			api = 'https://api.datamuse.com/' \
+			      'words?%s=%s&sp=%s*&max=%d&%s=%s' % params_set
 		return api
 
 	def _prevent_repetition(self, data: list) -> list:
@@ -406,7 +428,7 @@ class Word(Re):
 			print('_' * 60)
 
 	async def get_words_that_sound_like(self, starts_with=None, max_=None,
-		                                display=False,
+										display=False,
 		                                data=False) -> Union[str, None]:
 		"""Get words that sound like self.word"""
 
@@ -414,7 +436,7 @@ class Word(Re):
 			kwargs_for_method:dict = {
 				'starts_with': starts_with,
 				'max_': max_,
-				'main_param': 'sl'
+				'main_param': 'sl',
 			}
 
 			api = self._detect_final_api(**kwargs_for_method)
@@ -450,14 +472,15 @@ class Word(Re):
 			print('_' * 60)
 
 	async def get_words_that_rhyme_with(self, starts_with=None, max_=None,
-	                                    display=False,
+	                                    display=False, related_to=None,
 	                                    data=False) -> Union[str, None]:
 
 		if not display and not data:
 			kwargs_for_method:dict = {
 				'starts_with': starts_with,
 				'max_': max_,
-				'main_param': 'rel_rhy'
+				'main_param': 'rel_rhy',
+				'other': {'additional_param':'ml', 'value': related_to}
 			}
 
 			api = self._detect_final_api(**kwargs_for_method)
@@ -500,14 +523,9 @@ word = Word('Sun')
 loop = asyncio.get_event_loop()
 
 funcs_and_args = [
-				  (Word.predict_gender_if_name, None),
-				  (Word.predict_nationality_if_name, None),
-				  (Word.get_similar_meanings, None),
-				  (Word.get_words_that_sound_like, None),
-				  (Word.get_words_that_spelled_similarly, None),
+				  (Word.get_words_that_rhyme_with, {'related_to': 'gun'}),
 				  ]
 
 start = time.time()
-task = word.task_async(*funcs_and_args)
+task = word.task_async(*funcs_and_args, display=True)
 res = loop.run_until_complete(task)
-print(res)
