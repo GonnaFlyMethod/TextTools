@@ -328,7 +328,7 @@ class Word(Re):
 				                additional_param, additional_param_value)
 			api = 'https://api.datamuse.com/' \
 			      'words?%s=%s&%s=%s' % params_set
-		elif start_with and not max_ and additional_param:
+		elif starts_with and not max_ and additional_param:
 			params_set:tuple = (main_param, self._word_for_api, starts_with,
 								additional_param, additional_param_value)
 			api = 'https://api.datamuse.com/' \
@@ -473,7 +473,7 @@ class Word(Re):
 
 	async def get_words_that_rhyme_with(self, starts_with=None, max_=None,
 	                                    display=False, related_to=None,
-	                                    data=False) -> Union[str, None]:
+	                                    data=None) -> Union[str, None]:
 
 		if not display and not data:
 			kwargs_for_method:dict = {
@@ -491,6 +491,29 @@ class Word(Re):
 			self._print_head(self.word, type_)
 			for num, dict_ in enumerate(clean_data):
 				msg = '%d) %s' % (num + 1, dict_['word'].capitalize())
+				print(msg)
+			print('_' * 60)
+
+	async def get_words_that_related(self, starts_with=None, max_=None,
+		                                  display=None, topics=None,
+		                                  data=None) -> Union[str, None]:
+		if not display and not data:
+			kwargs_for_method:dict = {
+				'starts_with': starts_with,
+				'max_': max_,
+				'main_param': 'rel_jjb',
+				'other': {'additional_param':'topics', 'value': topics}
+			}
+
+			api = self._detect_final_api(**kwargs_for_method)
+			return api
+		else:
+			type_ = f'related words for {self.word}'
+			self._print_head(self.word, type_)
+			for num, dict_ in enumerate(data):
+				word_for_print: str = dict_['word'].capitalize()
+				msg = '%d) %s, ' \
+					  'score: %d' % (num + 1, word_for_print, dict_['score'])
 				print(msg)
 			print('_' * 60)
 
@@ -519,11 +542,12 @@ class Word(Re):
 				await func_obj(self, display=True, data=res)
 		return final_res
 
-word = Word('Sun')
+word = Word('Body')
 loop = asyncio.get_event_loop()
 
 funcs_and_args = [
-				  (Word.get_words_that_rhyme_with, {'related_to': 'gun'}),
+				  (Word.get_words_that_related, {'starts_with': 'F', 'max_':2, 
+				  	                             'topics':'health'})
 				  ]
 
 start = time.time()
