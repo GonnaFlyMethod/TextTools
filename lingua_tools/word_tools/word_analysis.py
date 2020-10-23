@@ -7,7 +7,6 @@ import asyncio
 from typing import Union
 from aiohttp import ClientSession
 from _async import async_HTTP_request
-
 import time
 
 class Word():
@@ -60,31 +59,44 @@ class Word():
 				additional_param_value: str = value['value']
 
 		api = None
-		if not starts_with and not max_ and not additional_param:
+
+		if (not starts_with and main_param != 'sug?s' and not max_
+		   and not additional_param):
 			mp, wc = main_param, self._word_for_api
 			api = f'https://api.datamuse.com/words?{mp}={wc}'
-		elif starts_with and not max_ and not additional_param:
+		elif (starts_with and main_param != 'sug?s' and not max_
+		      and not additional_param):
 			params_set:tuple = (main_param, self._word_for_api, starts_with)
 			api = 'https://api.datamuse.com/' \
 				  'words?%s=%s&sp=%s*' % params_set
-		elif not starts_with and max_ and not additional_param:
+		elif (not starts_with and main_param != 'sug?s' and max_
+		     and not additional_param):
 			api = 'https://api.datamuse.com/' \
 			      'words?%s=%s&max=%d' % (main_param, self._word_for_api, max_)
-		elif starts_with and max_ and not additional_param:
+		elif (starts_with and main_param != 'sug?s' and max_
+		     and not additional_param):
 			params_set:tuple = (main_param, self._word_for_api,
 				                starts_with, max_)
 			api = 'https://api.datamuse.com/' \
 			      'words?%s=%s&sp=%s*&max=%d' % params_set
-		elif not starts_with and not max_ and additional_param:
+		elif (not starts_with and main_param != 'sug?s' and not max_
+		     and additional_param):
 			params_set:tuple = (main_param, self._word_for_api,
 				                additional_param, additional_param_value)
 			api = 'https://api.datamuse.com/' \
 			      'words?%s=%s&%s=%s' % params_set
-		elif starts_with and not max_ and additional_param:
+		elif (starts_with and main_param != 'sug?s' and not max_
+		     and additional_param):
 			params_set:tuple = (main_param, self._word_for_api, starts_with,
 								additional_param, additional_param_value)
 			api = 'https://api.datamuse.com/' \
 			      'words?%s=%s&sp=%s*&%s=%s' % params_set
+		elif main_param == 'sug?s' and not max_:
+			params_set:tuple = (main_param, self._word_for_api)
+			api = 'https://api.datamuse.com/%s=%s' % params_set
+		elif main_param == 'sug?s' and max_:
+			params_set:tuple = (main_param, self._word_for_api, max_)				          
+			api = 'https://api.datamuse.com/%s=%s&max=%d' % params_set
 		else:
 			params_set:tuple = (main_param, self._word_for_api, starts_with,
 								max_, additional_param, additional_param_value)
@@ -113,7 +125,8 @@ class Word():
 				ex = i['examples']
 				for e in ex:
 					if isinstance(e, str):
-						clean_line = re.sub(self.HTML_TAGS, '', e)
+						html_tags_killer_re = r'<\/?\w+(\s+)?[^>]*>'
+						clean_line = re.sub(html_tags_killer_re, '', e)
 						examples.append(clean_line)
 			self._print_head(self.word, 'Usage')
 			for num, ex in enumerate(examples):
@@ -167,7 +180,7 @@ class Word():
 			type_ = f'words that have similar meanings with {self.word}'
 			self._print_head(self.word, type_)
 			for num, dict_ in enumerate(data):
-				msg_raw = '%d) %s,' % (num, dict_['word'].capitalize())
+				msg_raw = '%d) %s,' % (num + 1, dict_['word'].capitalize())
 
 				tags = ''
 				try:
@@ -269,6 +282,26 @@ class Word():
 				print(msg)
 			print('_' * 60)
 
+	async def get_suggestions(self, max_=None, display=False,
+		                      data=None) -> Union[str, None]:
+		if not display and not data:
+			kwargs_for_method:dict = {
+				'max_': max_,
+				'main_param': 'sug?s',
+			}
+
+			api = self._detect_final_api(**kwargs_for_method)
+			return api
+		else:
+			type_ = f'suggestions for {self.word}'
+			self._print_head(self.word, type_)
+			for num, dict_ in enumerate(data):
+				word_for_print: str = dict_['word'].capitalize()
+				msg = '%d) %s, ' \
+					  'score: %d' % (num + 1, word_for_print, dict_['score'])
+				print(msg)
+			print('_' * 60)
+
 	async def task_async(self, *funcs_and_kwargs, display=False) -> dict:
 		urls = []
 		functions_name_and_functions_objs:dict = {}
@@ -299,7 +332,11 @@ loop = asyncio.get_event_loop()
 
 funcs_and_args = [
 				  (Word.get_words_that_related, {'starts_with': 'F', 'max_':2, 
-				  	                             'topics':'health'})
+				  	                             'topics':'health'}),
+				  (Word.get_usage, None),
+				  (Word.get_words_that_sound_like, None),
+				  (Word.get_suggestions, {'max_':3}),
+				  (Word.get_similar_meanings, None)
 				  ]
 
 task = word.task_async(*funcs_and_args, display=True)
