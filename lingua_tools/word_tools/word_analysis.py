@@ -302,6 +302,28 @@ class Word():
 				print(msg)
 			print('_' * 60)
 
+	async def get_nouns_that_described_by_the_word(self, max_=None,
+		                                         display=False,
+		                                         data=None) -> Union[str, None]:
+
+		if not display and not data:
+			kwargs_for_method:dict = {
+				'max_': max_,
+				'main_param': 'rel_jja',
+			}
+
+			api = self._detect_final_api(**kwargs_for_method)
+			return api
+		else:
+			type_ = f'nouns that are often described by word {self.word}'
+			self._print_head(self.word, type_)
+			for num, dict_ in enumerate(data):
+				word_for_print: str = dict_['word'].capitalize()
+				msg = '%d) %s, ' \
+					  'score: %d' % (num + 1, word_for_print, dict_['score'])
+				print(msg)
+			print('_' * 60)
+
 	async def task_async(self, *funcs_and_kwargs, display=False) -> dict:
 		urls = []
 		functions_name_and_functions_objs:dict = {}
@@ -335,8 +357,8 @@ funcs_and_args = [
 				  	                             'topics':'health'}),
 				  (Word.get_usage, None),
 				  (Word.get_words_that_sound_like, None),
-				  (Word.get_suggestions, {'max_':3}),
-				  (Word.get_similar_meanings, None)
+				  (Word.get_suggestions, {'max_':6}),
+				  (Word.get_nouns_that_described_by_the_word, None)
 				  ]
 
 task = word.task_async(*funcs_and_args, display=True)
